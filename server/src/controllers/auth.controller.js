@@ -1,6 +1,7 @@
 // backend/src/controllers/authController.js
 const User = require('../models/user.model');
 const { generateToken } = require('../config/authConfig');
+const { validateEmail, validatePassword, sanitizeInput } = require('../utils/validators');
 
 exports.register = async (req, res, next) => {
   try {
@@ -8,6 +9,12 @@ exports.register = async (req, res, next) => {
 
     if (!name || !email || !password)
       return res.status(400).json({ message: 'Name, email, and password are required.' });
+    
+    if (!validateEmail(email))
+      return res.status(400).json({ message: 'Invalid email format.' });
+    
+    if (!validatePassword(password))
+      return res.status(400).json({ message: 'Password must be at least 6 characters.' });
 
     const existing = await User.findOne({ email });
     if (existing)
@@ -30,7 +37,10 @@ exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    if (!validateEmail(email))
+      return res.status(400).json({ message: 'Invalid email format.' });
+
+    const user = await User.findOne({ email: sanitizeInput(email) });
     if (!user)
       return res.status(404).json({ message: 'User not found' });
 

@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./docs/swagger.json');
-const { notFound, errorHandler } = require('./middleware/errorHandler');
+const { notFound, errorHandler } = require('./middleware/errorHandler.middleware');
 const routes = require('./routes/index');
 const { limiter } = require('./utils/responseHelper'); // optional rate limiter if you add one
 
@@ -43,8 +43,8 @@ app.get('/health', (req, res) => {
 app.use('/api', routes);
 
 // 404 and centralized error handler
-// app.use(notFound);
-// app.use(errorHandler);
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
  

@@ -1,0 +1,41 @@
+# Environment variables
+.env
+.env.local
+.env.production
+.env.staging
+
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Logs
+*.log
+logs/
+server/server.log
+
+# Build outputs
+build/
+dist/
+*/build/
+*/dist/
+
+# Database files
+*.db
+*.sqlite
+
+# Credentials
+credentials.json
+client_secret_*.json
+service-account-key.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Test files
+test-*.js
+*-test.js
