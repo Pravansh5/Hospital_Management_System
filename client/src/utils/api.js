@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: "http://localhost:4000/api", // Backend server URL
+  baseURL: "https://hospital-management-system-3by0.onrender.com/api", // Backend server URL
   headers: {
     "Content-Type": "application/json",
   },
