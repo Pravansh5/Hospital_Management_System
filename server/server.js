@@ -19,9 +19,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.CLIENT_URL 
-    : [process.env.CLIENT_URL, 'http://localhost:3000', 'http://localhost:3001'],
+  origin: [
+    process.env.CLIENT_URL,
+    'http://localhost:3000', 
+    'http://localhost:3001',
+    'http://localhost:5173',
+    'https://hospital-management-system-three-sand.vercel.app'
+  ].filter(Boolean),
   credentials: true,
   optionsSuccessStatus: 200
 };
