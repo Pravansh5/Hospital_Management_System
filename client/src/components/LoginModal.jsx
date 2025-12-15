@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import toast from 'react-hot-toast';
 import { authAPI } from "../utils/api";
 
 const LoginModal = ({ onClose, onLogin }) => {
@@ -25,15 +26,16 @@ const LoginModal = ({ onClose, onLogin }) => {
       localStorage.setItem("user", JSON.stringify(user));
 
       console.log("Login successful:", user);
+      toast.success(`Welcome back, ${user.name}!`);
       if (onLogin) {
         onLogin(user);
       }
       onClose();
     } catch (err) {
       console.error("Login error:", err);
-      setError(
-        err.response?.data?.message || "Login failed. Please try again."
-      );
+      const errorMessage = err.response?.data?.message || "Login failed. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

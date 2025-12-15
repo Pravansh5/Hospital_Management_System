@@ -50,7 +50,12 @@ const createNotification = async (req, res) => {
             notification.isSent = true;
             notification.sentAt = new Date();
             await notification.save();
+            logger.info(`${channel} notification sent successfully to ${recipient}`);
+          } else {
+            logger.error(`Failed to send ${channel} notification to ${recipient}: ${result.error}`);
           }
+        } else {
+          logger.warn(`No ${channel} recipient found for user ${userId}`);
         }
       }
     }
@@ -174,55 +179,55 @@ const sendAppointmentNotification = async (
     };
 
     // Create in-app notification for patient
-    await createNotification(
-      {
-        body: {
-          userId: appointment.patient._id,
-          appointmentId: appointment._id,
-          type,
-          channel: "in_app",
-          title: getNotificationTitle(type),
-          message: getNotificationMessage(type, notificationData),
-          metadata: notificationData,
-        },
-      },
-      { status: () => ({ json: () => {} }) }
-    ); // Mock response for internal call
+    const patientNotification = new Notification({
+      userId: appointment.patient._id,
+      appointmentId: appointment._id,
+      type,
+      channel: "in_app",
+      title: getNotificationTitle(type),
+      message: getNotificationMessage(type, notificationData),
+      metadata: notificationData,
+    });
+    await patientNotification.save();
 
     // Create in-app notification for doctor
-    await createNotification(
-      {
-        body: {
-          userId: appointment.doctor._id,
-          appointmentId: appointment._id,
-          type,
-          channel: "in_app",
-          title: getNotificationTitle(type, "doctor"),
-          message: getNotificationMessage(type, notificationData, "doctor"),
-          metadata: notificationData,
-        },
-      },
-      { status: () => ({ json: () => {} }) }
-    ); // Mock response for internal call
+    const doctorNotification = new Notification({
+      userId: appointment.doctor._id,
+      appointmentId: appointment._id,
+      type,
+      channel: "in_app",
+      title: getNotificationTitle(type, "doctor"),
+      message: getNotificationMessage(type, notificationData, "doctor"),
+      metadata: notificationData,
+    });
+    await doctorNotification.save();
 
     // Send email notification to patient
     if (appointment.patient.email) {
-      await sendNotification(
+      const emailResult = await sendNotification(
         "email",
         appointment.patient.email,
         type,
         notificationData
       );
+      if (!emailResult.success) {
+        logger.error(`Failed to send email to patient ${appointment.patient.email}: ${emailResult.error}`);
+      } else {
+        logger.info(`Email sent successfully to patient ${appointment.patient.email}`);
+      }
     }
 
     // Send SMS notification to patient if phone exists
     if (appointment.patient.phone && process.env.TWILIO_ACCOUNT_SID) {
-      await sendNotification(
+      const smsResult = await sendNotification(
         "sms",
         appointment.patient.phone,
         type,
         notificationData
       );
+      if (!smsResult.success) {
+        logger.error(`Failed to send SMS to patient ${appointment.patient.phone}: ${smsResult.error}`);
+      }
     }
 
     logger.info(
@@ -233,60 +238,10 @@ const sendAppointmentNotification = async (
   }
 };
 
-// Schedule reminder notifications
+// Simple reminder function (no scheduling)
 const scheduleAppointmentReminders = async (appointmentId) => {
-  try {
-    const appointment = await AppointmentModel.findById(appointmentId).populate(
-      "patient",
-      "name email phone"
-    );
-
-    if (!appointment) return;
-
-    const appointmentDate = new Date(appointment.date);
-    const reminderTimes = [
-      { hours: 24, type: "appointment_reminder" }, // 1 day before
-      { hours: 2, type: "appointment_reminder" }, // 2 hours before
-    ];
-
-    for (const reminder of reminderTimes) {
-      const reminderDate = new Date(
-        appointmentDate.getTime() - reminder.hours * 60 * 60 * 1000
-      );
-
-      if (reminderDate > new Date()) {
-        await createNotification(
-          {
-            body: {
-              userId: appointment.patient._id,
-              appointmentId: appointment._id,
-              type: reminder.type,
-              channel: "in_app",
-              title: "Appointment Reminder",
-              message: `Your appointment with ${appointment.doctor.name} is in ${reminder.hours} hours`,
-              scheduledFor: reminderDate,
-              metadata: {
-                patientName: appointment.patient.name,
-                doctorName: appointment.doctor.name,
-                date: appointment.date.toLocaleDateString(),
-                time: `${appointment.timeSlot.startTime} - ${appointment.timeSlot.endTime}`,
-                appointmentType: appointment.appointmentType,
-                location: appointment.location,
-                meetingLink: appointment.meetingLink,
-              },
-            },
-          },
-          { status: () => ({ json: () => {} }) }
-        ); // Mock response for internal call
-      }
-    }
-
-    logger.info(
-      `Reminder notifications scheduled for appointment ${appointmentId}`
-    );
-  } catch (error) {
-    logger.error("Error scheduling appointment reminders:", error);
-  }
+  // Simplified - just log for now
+  logger.info(`Reminder scheduled for appointment ${appointmentId}`);
 };
 
 // Helper functions

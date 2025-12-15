@@ -32,7 +32,7 @@ const createReview = async (req, res) => {
       return sendResponse(res, 404, false, "Appointment not found");
     }
 
-    if (appointment.patient.toString() !== patientId) {
+    if (appointment.patient._id.toString() !== patientId) {
       return sendResponse(res, 403, false, "Access denied");
     }
 
@@ -76,6 +76,9 @@ const createReview = async (req, res) => {
 
     // Update doctor's average rating
     await updateDoctorRating(appointment.doctor);
+
+    // Mark appointment as reviewed
+    await AppointmentModel.findByIdAndUpdate(appointmentId, { reviewed: true });
 
     logger.info(
       `Review created for appointment ${appointmentId} by patient ${patientId}`
@@ -313,11 +316,24 @@ const reportReview = async (req, res) => {
   }
 };
 
+// Manual rating update for testing
+const updateRating = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    await updateDoctorRating(doctorId);
+    sendResponse(res, 200, true, "Rating updated successfully");
+  } catch (error) {
+    logger.error("Error updating rating:", error);
+    sendResponse(res, 500, false, "Internal server error");
+  }
+};
+
 // Helper function to update doctor's average rating
 const updateDoctorRating = async (doctorId) => {
   try {
+    const mongoose = require('mongoose');
     const result = await Review.aggregate([
-      { $match: { doctor: doctorId, isVerified: true } },
+      { $match: { doctor: new mongoose.Types.ObjectId(doctorId), isVerified: true } },
       {
         $group: {
           _id: null,
@@ -359,8 +375,9 @@ const updateDoctorRating = async (doctorId) => {
 // Helper function to get doctor review statistics
 const getDoctorReviewStats = async (doctorId) => {
   try {
+    const mongoose = require('mongoose');
     const stats = await Review.aggregate([
-      { $match: { doctor: doctorId, isVerified: true } },
+      { $match: { doctor: new mongoose.Types.ObjectId(doctorId), isVerified: true } },
       {
         $group: {
           _id: null,
@@ -429,4 +446,5 @@ module.exports = {
   markHelpful,
   respondToReview,
   reportReview,
+  updateRating,
 };

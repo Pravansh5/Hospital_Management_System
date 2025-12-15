@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
+import toast from 'react-hot-toast';
 import { authAPI } from "../utils/api";
 
 const SignupModal = ({ onClose, onSignup }) => {
@@ -23,7 +24,9 @@ const SignupModal = ({ onClose, onSignup }) => {
 
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
+      const errorMsg = "Passwords do not match";
+      setError(errorMsg);
+      toast.error(errorMsg);
       setLoading(false);
       return;
     }
@@ -45,15 +48,16 @@ const SignupModal = ({ onClose, onSignup }) => {
       localStorage.setItem("user", JSON.stringify(user));
 
       console.log("Signup successful:", user);
+      toast.success(`Welcome to MediCare, ${user.name}!`);
       if (onSignup) {
         onSignup(user);
       }
       onClose();
     } catch (err) {
       console.error("Signup error:", err);
-      setError(
-        err.response?.data?.message || "Signup failed. Please try again."
-      );
+      const errorMessage = err.response?.data?.message || "Signup failed. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

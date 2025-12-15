@@ -1,6 +1,6 @@
-import SearchBar from "./SearchBar";
-import { Clock, Users, Star, Shield } from "lucide-react";
+import { Clock, Users, Star, Shield, Search } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   const stats = [
@@ -24,7 +24,7 @@ const HeroSection = () => {
           <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-8 leading-tight">
             Empowering wellness, 
             <span className="text-primary block mt-2">inspiring life</span>
-            <span className="text-gray-700">through precision and compassion.</span>
+            <span className="text--700">through precision and compassion.</span>
           </h1>
 
           <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed font-medium">
@@ -33,7 +33,20 @@ const HeroSection = () => {
           </p>
         </div>
 
-        <SearchBar />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+          className="flex justify-center"
+        >
+          <Link
+            to="/doctors"
+            className="bg-primary text-white px-12 py-4 rounded-xl font-semibold hover:bg-primary-hover transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-3 text-lg"
+          >
+            <Search className="h-6 w-6" />
+            Browse Doctors
+          </Link>
+        </motion.div>
 
         {/* Trust Indicators */}
         <motion.div

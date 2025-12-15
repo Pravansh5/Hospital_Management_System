@@ -2,6 +2,30 @@ const ProviderProfile = require("../models/providerProfile.model");
 const User = require("../models/user.model");
 const { sendResponse } = require("../utils/responseHelper");
 const logger = require("../utils/logger");
+const multer = require("multer");
+const cloudinary = require('cloudinary').v2;
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
 
 // ✅ Create or Update Provider Profile
 exports.createOrUpdateProfile = async (req, res) => {
@@ -16,6 +40,7 @@ exports.createOrUpdateProfile = async (req, res) => {
       location,
       appointmentType,
       availability,
+      profilePhoto,
     } = req.body;
 
     // Validate required fields
@@ -56,6 +81,7 @@ exports.createOrUpdateProfile = async (req, res) => {
       location,
       appointmentType: appointmentType || "both",
       availability: availability || [],
+      profilePhoto,
     };
 
     const profile = await ProviderProfile.findOneAndUpdate(
@@ -295,3 +321,49 @@ exports.updateAvailability = async (req, res) => {
     sendResponse(res, 500, false, "Server error while updating availability");
   }
 };
+
+// ✅ Upload Profile Photo
+exports.uploadProfilePhoto = async (req, res) => {
+  try {
+    const doctorId = req.user.id;
+    
+    if (!req.file) {
+      return sendResponse(res, 400, false, "No file uploaded");
+    }
+
+    // Upload to Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        {
+          folder: 'doctor-profiles',
+          public_id: `doctor-${doctorId}-${Date.now()}`,
+          transformation: [
+            { width: 400, height: 400, crop: 'fill' },
+            { quality: 'auto' }
+          ]
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      ).end(req.file.buffer);
+    });
+    
+    const profile = await ProviderProfile.findOneAndUpdate(
+      { doctorId },
+      { profilePhoto: result.secure_url },
+      { new: true, upsert: true }
+    );
+
+    logger.info(`Profile photo uploaded to Cloudinary for doctor ${doctorId}`);
+    sendResponse(res, 200, true, "Profile photo uploaded successfully", {
+      profilePhoto: result.secure_url
+    });
+  } catch (error) {
+    logger.error("Error uploading profile photo:", error);
+    sendResponse(res, 500, false, "Server error while uploading photo");
+  }
+};
+
+// Export multer upload middleware
+exports.uploadMiddleware = upload.single('profilePhoto');

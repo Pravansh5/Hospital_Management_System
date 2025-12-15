@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: "https://hospital-management-system-3by0.onrender.com/api", // Backend server URL
+  baseURL: "http://localhost:4000/api", // Backend server URL
   headers: {
     "Content-Type": "application/json",
   },
@@ -60,29 +60,6 @@ export const providerAPI = {
   getProviderById: (id) => api.get(`/provider/${id}`),
 };
 
-// Calendar API calls
-export const calendarAPI = {
-  syncAppointmentToCalendar: (appointmentId, providers) => 
-    api.post(`/calendar/sync/${appointmentId}`, { providers }),
-  createCalendarEvent: (appointmentId, provider) => 
-    api.post("/calendar/event", { appointmentId, provider }),
-  updateCalendarEvent: (appointmentId, provider) => 
-    api.put("/calendar/event", { appointmentId, provider }),
-  deleteCalendarEvent: (appointmentId, provider) => 
-    api.delete("/calendar/event", { data: { appointmentId, provider } }),
-  getCalendarEvents: (provider = "google", timeMin) => 
-    api.get("/calendar/events", { params: { provider, timeMin } }),
-  downloadICalFile: (appointmentId) => 
-    api.get(`/calendar/ical/${appointmentId}`, { responseType: 'text' }),
-  getCalendarProviders: () => api.get("/calendar/providers"),
-  getGoogleAuthUrl: () => api.get("/calendar/google/auth"),
-};
 
-// Add calendar methods to appointmentAPI for convenience
-appointmentAPI.syncAppointmentToCalendar = calendarAPI.syncAppointmentToCalendar;
-appointmentAPI.getCalendarEvents = calendarAPI.getCalendarEvents;
-appointmentAPI.getCalendarProviders = calendarAPI.getCalendarProviders;
-appointmentAPI.getGoogleAuthUrl = calendarAPI.getGoogleAuthUrl;
-appointmentAPI.downloadICalFile = calendarAPI.downloadICalFile;
 
 export default api;

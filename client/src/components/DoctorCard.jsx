@@ -35,8 +35,8 @@ const DoctorCard = ({ doctor }) => {
     id = 1,
     name = "Dr. John Smith",
     specialty = "Cardiologist",
-    rating = 4.8,
-    reviewCount = 127,
+    rating = 0,
+    reviewCount = 0,
     location = "New York, NY",
     nextAvailable = "Today",
     image = "/api/placeholder/120/120",
@@ -46,6 +46,9 @@ const DoctorCard = ({ doctor }) => {
     education = "Harvard Medical School",
     price = "$200",
   } = doctor || {};
+
+  // Debug rating values
+  console.log('Doctor rating data:', { id, name, rating, reviewCount });
 
   const renderStars = (rating) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -104,11 +107,11 @@ const DoctorCard = ({ doctor }) => {
             <div className="flex items-center">
               {renderStars(rating)}
               <span className="ml-2 text-sm font-semibold text-gray-900">
-                {rating}
+                {rating > 0 ? rating.toFixed(1) : 'No rating'}
               </span>
             </div>
             <span className="ml-2 text-sm text-gray-500">
-              ({reviewCount} reviews)
+              ({reviewCount} {reviewCount === 1 ? 'review' : 'reviews'})
             </span>
             <span className="ml-4 text-sm text-gray-500">• {experience}</span>
           </div>
@@ -142,7 +145,7 @@ const DoctorCard = ({ doctor }) => {
               {telemedicine && (
                 <div className="flex items-center text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full border border-blue-200">
                   <Video className="h-3 w-3 mr-1" />
-                  Video Visit
+                  Online Appointment
                 </div>
               )}
             </div>

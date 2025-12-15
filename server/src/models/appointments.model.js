@@ -59,9 +59,6 @@ const appointmentSchema = new mongoose.Schema(
     location: {
       type: String, // For in-person appointments
     },
-    meetingLink: {
-      type: String, // For telemedicine appointments
-    },
     reminders: [
       {
         type: {
@@ -83,6 +80,10 @@ const appointmentSchema = new mongoose.Schema(
         syncedAt: Date,
       },
     ],
+    reviewed: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

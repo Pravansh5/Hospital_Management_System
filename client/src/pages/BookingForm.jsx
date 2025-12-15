@@ -11,6 +11,7 @@ import {
   FileText,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import toast from 'react-hot-toast';
 import api from "../utils/api";
 
 const BookingForm = () => {
@@ -83,7 +84,8 @@ const BookingForm = () => {
             name: providerData.doctorId.name,
             specialty: providerData.specialty,
             location: providerData.location || "Location not specified",
-            image: "/api/placeholder/80/80",
+            image:
+              providerData.profilePhoto || providerData.doctorId.profilePhoto || "/api/placeholder/80/80",
             consultationFee: providerData.consultationFee,
             appointmentType: providerData.appointmentType,
           });
@@ -102,7 +104,8 @@ const BookingForm = () => {
                 name: doctorProfile.doctorId.name,
                 specialty: doctorProfile.specialty,
                 location: doctorProfile.location || "Location not specified",
-                image: "/api/placeholder/80/80",
+                image:
+                  doctorProfile.profilePhoto || doctorProfile.doctorId.profilePhoto || "/api/placeholder/80/80",
                 consultationFee: doctorProfile.consultationFee,
                 appointmentType: doctorProfile.appointmentType,
               });
@@ -176,23 +179,72 @@ const BookingForm = () => {
     }
   }, [navigate]);
 
-  // Generate available dates (next 7 days excluding weekends)
+  // Generate available dates based on doctor's availability
   useEffect(() => {
-    const dates = [];
-    const today = new Date();
-    let currentDate = new Date(today);
-    currentDate.setDate(currentDate.getDate() + 1); // Start from tomorrow
-    
-    while (dates.length < 7) {
-      const dayOfWeek = currentDate.getDay();
-      // Skip weekends (0 = Sunday, 6 = Saturday)
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        dates.push(currentDate.toISOString().split('T')[0]);
+    const generateAvailableDates = async () => {
+      try {
+        if (!doctorId) return;
+        
+        // Get doctor's availability
+        const response = await api.get(`/provider/${doctorId}`);
+        if (!response.data.success || !response.data.data.availability) {
+          // Fallback to weekdays if no availability set
+          const dates = [];
+          const today = new Date();
+          let currentDate = new Date(today);
+          currentDate.setDate(currentDate.getDate() + 1);
+          
+          while (dates.length < 7) {
+            const dayOfWeek = currentDate.getDay();
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+              dates.push(currentDate.toISOString().split('T')[0]);
+            }
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+          setAvailableDates(dates);
+          return;
+        }
+        
+        const availability = response.data.data.availability;
+        const availableDays = availability.map(avail => avail.day);
+        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        
+        const dates = [];
+        const today = new Date();
+        let currentDate = new Date(today);
+        currentDate.setDate(currentDate.getDate() + 1);
+        
+        // Generate next 14 days and filter by doctor's availability
+        for (let i = 0; i < 14 && dates.length < 7; i++) {
+          const dayOfWeek = dayNames[currentDate.getDay()];
+          if (availableDays.includes(dayOfWeek)) {
+            dates.push(currentDate.toISOString().split('T')[0]);
+          }
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        setAvailableDates(dates);
+      } catch (error) {
+        console.error('Error fetching doctor availability:', error);
+        // Fallback to weekdays
+        const dates = [];
+        const today = new Date();
+        let currentDate = new Date(today);
+        currentDate.setDate(currentDate.getDate() + 1);
+        
+        while (dates.length < 7) {
+          const dayOfWeek = currentDate.getDay();
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            dates.push(currentDate.toISOString().split('T')[0]);
+          }
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+        setAvailableDates(dates);
       }
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    setAvailableDates(dates);
-  }, []);
+    };
+    
+    generateAvailableDates();
+  }, [doctorId]);
 
   // Fetch available time slots when date is selected
   useEffect(() => {
@@ -242,7 +294,7 @@ const BookingForm = () => {
       const userData = localStorage.getItem("user");
       
       if (!token || !userData) {
-        alert("Please log in to book an appointment");
+        toast.error("Please log in to book an appointment");
         navigate("/");
         setSubmitting(false);
         return;
@@ -251,20 +303,20 @@ const BookingForm = () => {
       // Check if user is a patient
       const user = JSON.parse(userData);
       if (user.role !== "patient") {
-        alert("Only patients can book appointments");
+        toast.error("Only patients can book appointments");
         setSubmitting(false);
         return;
       }
 
       // Validate form data
       if (!selectedDate || !selectedTime) {
-        alert("Please select both date and time");
+        toast.error("Please select both date and time");
         setSubmitting(false);
         return;
       }
 
       if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.reason) {
-        alert("Please fill in all required fields");
+        toast.error("Please fill in all required fields");
         setSubmitting(false);
         return;
       }
@@ -290,17 +342,17 @@ const BookingForm = () => {
       const response = await api.post("/appointments", appointmentData);
 
       if (response.data.success) {
-        alert("Appointment booked successfully!");
+        toast.success("Appointment booked successfully!");
         // Refresh available slots to remove the booked time
         await fetchAvailableSlots();
         navigate("/appointments");
       } else {
-        alert(response.data.message || "Failed to book appointment");
+        toast.error(response.data.message || "Failed to book appointment");
       }
     } catch (error) {
       console.error("Error booking appointment:", error);
       const errorMessage = error.response?.data?.message || error.message || "Failed to book appointment. Please try again.";
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setSubmitting(false);
     }
@@ -350,11 +402,12 @@ const BookingForm = () => {
               <img
                 src={doctor.image}
                 alt={doctor.name}
-                className="w-12 h-12 rounded-full border-2 border-white"
+                className="w-16 h-16 rounded-full border-2 border-white object-cover"
               />
               <div>
-                <h2 className="font-semibold">{doctor.name}</h2>
+                <h2 className="font-semibold text-lg">{doctor.name}</h2>
                 <p className="text-blue-100">{doctor.specialty}</p>
+                <p className="text-blue-200 text-sm">{doctor.location}</p>
               </div>
             </div>
           </div>
@@ -483,17 +536,7 @@ const BookingForm = () => {
                   <User className="h-5 w-5 mr-2" />
                   Patient Information
                 </h3>
-                {isLoggedIn ? (
-                  <div className="flex items-center text-sm bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-200">
-                    <User className="h-3 w-3 mr-1" />
-                    Auto-filled from your profile
-                  </div>
-                ) : (
-                  <div className="flex items-center text-sm bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
-                    <User className="h-3 w-3 mr-1" />
-                    Sign in to auto-fill your details
-                  </div>
-                )}
+                
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>

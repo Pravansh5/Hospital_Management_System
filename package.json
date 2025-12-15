@@ -1,24 +1,14 @@
 {
-  "name": "hospital_management_system",
+  "name": "hospital-management-system",
   "version": "1.0.0",
-  "description": "The Hospital Management System is a full-stack web application designed to streamline hospital operations, enhance patient care, and securely manage patient data.   It provides a centralized platform for doctors, nurses, patients, &amp; administrators to efficiently handle appointments, medical records, &amp; patient feedback while ensuring data security.",
-  "main": "test-appointments.js",
+  "description": "Simple Hospital Management System",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Pravansh5/Hospital_Management_System.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/Pravansh5/Hospital_Management_System/issues"
-  },
-  "homepage": "https://github.com/Pravansh5/Hospital_Management_System#readme",
-  "dependencies": {
-    "axios": "^1.13.2"
+  "devDependencies": {
+    "concurrently": "^8.2.2"
   }
 }

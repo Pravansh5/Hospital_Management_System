@@ -17,10 +17,10 @@ import { motion } from "framer-motion";
 const DoctorProfile = () => {
   const navigate = useNavigate();
   const { id: doctorId } = useParams();
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedTime, setSelectedTime] = useState(null);
   const [doctor, setDoctor] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -83,7 +83,7 @@ const DoctorProfile = () => {
             rating: profile.rating || 0,
             reviewCount: profile.reviewCount || 0,
             location: profile.location || "Location not specified",
-            image: "/api/placeholder/200/200",
+            image: profile.profilePhoto || "/api/placeholder/200/200",
             acceptsInsurance: true, // This would need to be added to the model
             telemedicine:
               profile.appointmentType === "telemedicine" ||
@@ -115,30 +115,50 @@ const DoctorProfile = () => {
     }
   }, [doctorId]);
 
-  // Mock available slots - in a real app, this would come from the API
-  const availableSlots = {
-    "2024-01-15": ["9:00 AM", "10:30 AM", "2:00 PM", "3:30 PM"],
-    "2024-01-16": ["9:00 AM", "11:00 AM", "1:00 PM", "4:00 PM"],
-    "2024-01-17": ["10:00 AM", "11:30 AM", "2:30 PM", "4:30 PM"],
+
+
+  // Fetch doctor reviews
+  const fetchReviews = async () => {
+    try {
+      setReviewsLoading(true);
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch(
+        `http://localhost:4000/api/review/doctor/${doctorId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const transformedReviews = data.data.reviews.map(review => ({
+            id: review._id,
+            patient: review.isAnonymous ? "Anonymous" : (review.patient?.name || "Anonymous"),
+            rating: review.rating,
+            date: new Date(review.createdAt).toLocaleDateString(),
+            comment: review.comment,
+            title: review.title,
+          }));
+          setReviews(transformedReviews);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setReviewsLoading(false);
+    }
   };
 
-  const reviews = [
-    {
-      id: 1,
-      patient: "John D.",
-      rating: 5,
-      date: "2024-01-10",
-      comment: "Excellent doctor! Very thorough and caring. Highly recommend.",
-    },
-    {
-      id: 2,
-      patient: "Maria S.",
-      rating: 5,
-      date: "2024-01-08",
-      comment:
-        "Dr. Johnson took the time to explain everything clearly. Great experience.",
-    },
-  ];
+  useEffect(() => {
+    if (doctorId) {
+      fetchReviews();
+    }
+  }, [doctorId]);
 
   const handleBookAppointment = () => {
     if (!isAuthenticated) {
@@ -151,9 +171,7 @@ const DoctorProfile = () => {
       return;
     }
     
-    if (selectedDate && selectedTime) {
-      navigate(`/book/${doctor.id}?date=${selectedDate}&time=${selectedTime}`);
-    }
+    navigate(`/book/${doctor.id}`);
   };
 
   if (loading) {
@@ -269,7 +287,7 @@ const DoctorProfile = () => {
                     {doctor.telemedicine && (
                       <div className="flex items-center text-blue-600">
                         <Video className="h-4 w-4 mr-1" />
-                        <span className="text-sm">Telemedicine Available</span>
+                        <span className="text-sm">Online Appointment Available</span>
                       </div>
                     )}
                   </div>
@@ -313,36 +331,56 @@ const DoctorProfile = () => {
               className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 mt-6"
             >
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                Patient Reviews
+                Patient Reviews ({reviews.length})
               </h2>
-              <div className="space-y-6">
-                {reviews.map((review) => (
-                  <div
-                    key={review.id}
-                    className="border-b border-gray-100 pb-6 last:border-b-0"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        <span className="font-medium text-gray-900">
-                          {review.patient}
-                        </span>
-                        <div className="flex items-center ml-3">
-                          {[...Array(review.rating)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className="h-4 w-4 text-yellow-400 fill-current"
-                            />
-                          ))}
+              {reviewsLoading ? (
+                <div className="text-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+                  <p className="text-gray-600">Loading reviews...</p>
+                </div>
+              ) : reviews.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">No reviews yet. Be the first to review this doctor!</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {reviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="border-b border-gray-100 pb-6 last:border-b-0"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                          <span className="font-medium text-gray-900">
+                            {review.patient}
+                          </span>
+                          <div className="flex items-center ml-3">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${
+                                  i < review.rating
+                                    ? "text-yellow-400 fill-current"
+                                    : "text-gray-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
                         </div>
+                        <span className="text-sm text-gray-500">
+                          {review.date}
+                        </span>
                       </div>
-                      <span className="text-sm text-gray-500">
-                        {review.date}
-                      </span>
+                      {review.title && (
+                        <h4 className="font-medium text-gray-900 mb-1">
+                          {review.title}
+                        </h4>
+                      )}
+                      <p className="text-gray-600">{review.comment}</p>
                     </div>
-                    <p className="text-gray-600">{review.comment}</p>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           </div>
 
@@ -353,72 +391,31 @@ const DoctorProfile = () => {
               animate={{ opacity: 1, x: 0 }}
               className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-8"
             >
-              <h3 className="text-xl font-bold text-gray-900 mb-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
                 Book Appointment
               </h3>
-
-              {/* Date Selection */}
-              <div className="mb-6">
-                <h4 className="font-medium text-gray-900 mb-3">Select Date</h4>
-                <div className="grid grid-cols-1 gap-2">
-                  {Object.keys(availableSlots).map((date) => (
-                    <button
-                      key={date}
-                      onClick={() => setSelectedDate(date)}
-                      className={`p-3 rounded-lg border text-left transition-colors ${
-                        selectedDate === date
-                          ? "border-primary bg-blue-50 text-primary"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      {new Date(date).toLocaleDateString("en-US", {
-                        weekday: "long",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </button>
-                  ))}
-                </div>
+              
+              <div className="mb-4">
+                <p className="text-gray-600 text-sm mb-4">
+                  Consultation Fee: <span className="font-semibold">${doctor?.consultationFee || 0}</span>
+                </p>
               </div>
-
-              {/* Time Selection */}
-              {selectedDate && (
-                <div className="mb-6">
-                  <h4 className="font-medium text-gray-900 mb-3">
-                    Select Time
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {availableSlots[selectedDate].map((time) => (
-                      <button
-                        key={time}
-                        onClick={() => setSelectedTime(time)}
-                        className={`p-2 rounded-lg border text-sm transition-colors ${
-                          selectedTime === time
-                            ? "border-primary bg-blue-50 text-primary"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        {time}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {canBookAppointment ? (
                 <button
                   onClick={handleBookAppointment}
-                  disabled={!selectedDate || !selectedTime}
-                  className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
                 >
+                  <Calendar className="h-4 w-4" />
                   Book Appointment
                 </button>
               ) : !isAuthenticated ? (
                 <button
                   onClick={() => alert("Please log in as a patient to book appointments")}
-                  className="w-full bg-gray-400 text-white py-3 rounded-lg font-medium cursor-not-allowed"
+                  className="w-full bg-gray-400 text-white py-3 rounded-lg font-medium cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Login to Book Appointment
+                  <Calendar className="h-4 w-4" />
+                  Login to Book
                 </button>
               ) : (
                 <div className="w-full bg-gray-100 text-gray-600 py-3 rounded-lg font-medium text-center">

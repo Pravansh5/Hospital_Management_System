@@ -13,6 +13,7 @@ import LoginModal from "./components/LoginModal";
 import SignupModal from "./components/SignupModal";
 import DoctorSignupModal from "./components/DoctorSignupModal";
 import { useState, useEffect, Component } from "react";
+import { Toaster } from 'react-hot-toast';
 import "./App.css";
 
 // Error Boundary Component
@@ -158,6 +159,22 @@ function App() {
               onSignup={handleDoctorSignup}
             />
           )}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#363636',
+                color: '#fff',
+              },
+              success: {
+                duration: 3000,
+                theme: {
+                  primary: '#4aed88',
+                },
+              },
+            }}
+          />
         </div>
       </Router>
     </ErrorBoundary>

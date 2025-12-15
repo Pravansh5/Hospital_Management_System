@@ -28,7 +28,6 @@ const Navbar = ({
     { name: "Browse Doctors", path: "/doctors", icon: null },
     // Show appointments only for authenticated users
     ...(isAuthenticated ? [{ name: "My Appointments", path: "/appointments", icon: Calendar }] : []),
-    { name: "Help", path: "#", icon: HelpCircle },
     // Only show "For Providers" to doctors or non-authenticated users
     ...(!isAuthenticated || user?.role === "doctor" ? [{ name: "For Providers", path: "/providers", icon: Building2 }] : []),
   ];

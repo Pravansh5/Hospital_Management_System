@@ -1,6 +1,7 @@
 const nodemailer = require("nodemailer");
 const twilio = require("twilio");
 const dotenv = require("dotenv");
+const logger = require("../utils/logger");
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
@@ -9,6 +10,18 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  tls: {
+    rejectUnauthorized: false
+  }
+});
+
+// Test email configuration on startup
+transporter.verify((error, success) => {
+  if (error) {
+    logger.error('SMTP configuration error:', error);
+  } else {
+    logger.info('SMTP server is ready to send emails');
+  }
 });
 
 // Twilio client for SMS

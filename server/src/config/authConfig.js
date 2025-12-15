@@ -1,20 +1,24 @@
-// backend/src/config/authConfig.js
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required');
-}
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-
-exports.generateToken = (user) => {
+const generateToken = (user) => {
   return jwt.sign(
-    { id: user._id, role: user.role, email: user.email },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    { 
+      id: user._id, 
+      email: user.email, 
+      role: user.role 
+    },
+    process.env.JWT_SECRET,
+    { 
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d' 
+    }
   );
 };
 
-exports.verifyToken = (token) => {
-  return jwt.verify(token, JWT_SECRET);
+const verifyToken = (token) => {
+  return jwt.verify(token, process.env.JWT_SECRET);
+};
+
+module.exports = {
+  generateToken,
+  verifyToken
 };

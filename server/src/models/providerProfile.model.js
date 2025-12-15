@@ -13,6 +13,7 @@ const providerProfileSchema = new mongoose.Schema({
   consultationFee: { type: Number, default: 0 },
   languages: [{ type: String }],
   location: { type: String },
+  profilePhoto: { type: String }, // URL or path to profile photo
   rating: { type: Number, default: 0, min: 0, max: 5 },
   reviewCount: { type: Number, default: 0 },
   ratingDistribution: {

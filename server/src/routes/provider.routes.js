@@ -8,6 +8,8 @@ const {
   updateProviderProfile,
   deleteProfile,
   updateAvailability,
+  uploadProfilePhoto,
+  uploadMiddleware,
 } = require("../controllers/provider.controller");
 
 const {
@@ -16,7 +18,7 @@ const {
 } = require("../middleware/auth.middleware");
 const roleMiddleware = require("../middleware/role.middleware");
 
-// 🩺 Doctor creates or updates their own profile
+//  Doctor creates or updates their own profile
 router.post(
   "/",
   authMiddleware,
@@ -24,19 +26,19 @@ router.post(
   createOrUpdateProfile
 );
 
-// 📋 Get all providers with filtering (for search) - PUBLIC ACCESS
+//  Get all providers with filtering (for search) - PUBLIC ACCESS
 router.get("/", getAllProviders);
 
 //  Get current doctor's profile
 router.get("/my", authMiddleware, roleMiddleware(["doctor"]), getMyProfile);
 
-// 👀 Get provider profile by doctorId (public for patients to view)
+//  Get provider profile by doctorId (public for patients to view)
 router.get("/:doctorId", getProfileByDoctorId);
 
 //  Update provider basic info (admin/doctor)
 router.put("/:id", authMiddleware, adminOrDoctorOnly, updateProviderProfile);
 
-// 📅 Update provider availability (doctor only)
+//  Update provider availability (doctor only)
 router.patch(
   "/availability",
   authMiddleware,
@@ -44,7 +46,16 @@ router.patch(
   updateAvailability
 );
 
-// 🗑️ Delete profile (admin/doctor)
+//  Upload profile photo (doctor only)
+router.post(
+  "/upload-photo",
+  authMiddleware,
+  roleMiddleware(["doctor"]),
+  uploadMiddleware,
+  uploadProfilePhoto
+);
+
+//  Delete profile (admin/doctor)
 router.delete("/:doctorId", authMiddleware, adminOrDoctorOnly, deleteProfile);
 
 module.exports = router;

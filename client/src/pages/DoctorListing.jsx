@@ -10,7 +10,14 @@ const DoctorListing = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({
+  const [appliedFilters, setAppliedFilters] = useState({
+    specialty: searchParams.get("specialty") || "",
+    location: searchParams.get("location") || "",
+    appointmentType: searchParams.get("appointmentType") || "",
+    minExperience: "",
+    maxFee: "",
+  });
+  const [filterForm, setFilterForm] = useState({
     specialty: searchParams.get("specialty") || "",
     location: searchParams.get("location") || "",
     appointmentType: searchParams.get("appointmentType") || "",
@@ -25,7 +32,7 @@ const DoctorListing = () => {
       setError(null);
 
       const queryParams = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
+      Object.entries(appliedFilters).forEach(([key, value]) => {
         if (value) queryParams.append(key, value);
       });
 
@@ -33,26 +40,38 @@ const DoctorListing = () => {
       const data = response.data;
 
       if (data.success) {
+        // Debug provider data
+        console.log('Raw provider data:', data.data.providers);
+        
         // Transform API data to match component expectations
-        const transformedDoctors = data.data.providers.map((provider) => ({
-          id: provider.doctorId._id,
-          name: provider.doctorId.name,
-          specialty: provider.specialty,
-          rating: provider.rating || 0,
-          reviewCount: provider.reviewCount || 0,
-          location: provider.location || "Location not specified",
-          nextAvailable: "Check availability", // This would need to be calculated
-          image: "/api/placeholder/120/120",
-          acceptsInsurance: true, // This would need to be added to the model
-          telemedicine:
-            provider.appointmentType === "telemedicine" ||
-            provider.appointmentType === "both",
-          experience: `${provider.experience}+ years`,
-          education: "Education not specified", // This would need to be added to the model
-          price: provider.consultationFee
-            ? `$${provider.consultationFee}`
-            : "Price not set",
-        }));
+        const transformedDoctors = data.data.providers.map((provider) => {
+          console.log('Provider rating data:', { 
+            id: provider.doctorId._id, 
+            name: provider.doctorId.name,
+            rating: provider.rating, 
+            reviewCount: provider.reviewCount 
+          });
+          
+          return {
+            id: provider.doctorId._id,
+            name: provider.doctorId.name,
+            specialty: provider.specialty,
+            rating: provider.rating || 0,
+            reviewCount: provider.reviewCount || 0,
+            location: provider.location || "Location not specified",
+            nextAvailable: "Check availability",
+            image: provider.profilePhoto || "/api/placeholder/120/120",
+            acceptsInsurance: true,
+            telemedicine:
+              provider.appointmentType === "telemedicine" ||
+              provider.appointmentType === "both",
+            experience: `${provider.experience}+ years`,
+            education: "Education not specified",
+            price: provider.consultationFee
+              ? `$${provider.consultationFee}`
+              : "Price not set",
+          };
+        });
 
         setDoctors(transformedDoctors);
       } else {
@@ -69,13 +88,29 @@ const DoctorListing = () => {
 
   useEffect(() => {
     fetchDoctors();
-  }, [filters]);
+  }, [appliedFilters]);
 
   const handleFilterChange = (filterType, value) => {
-    setFilters((prev) => ({
+    setFilterForm((prev) => ({
       ...prev,
       [filterType]: value,
     }));
+  };
+
+  const applyFilters = () => {
+    setAppliedFilters(filterForm);
+  };
+
+  const clearFilters = () => {
+    const emptyFilters = {
+      specialty: "",
+      location: "",
+      appointmentType: "",
+      minExperience: "",
+      maxFee: "",
+    };
+    setFilterForm(emptyFilters);
+    setAppliedFilters(emptyFilters);
   };
 
   if (loading) {
@@ -141,7 +176,7 @@ const DoctorListing = () => {
                 <div>
                   <h4 className="font-medium text-gray-900 mb-3">Specialty</h4>
                   <select
-                    value={filters.specialty}
+                    value={filterForm.specialty}
                     onChange={(e) =>
                       handleFilterChange("specialty", e.target.value)
                     }
@@ -154,6 +189,20 @@ const DoctorListing = () => {
                     <option value="Neurologist">Neurologist</option>
                     <option value="Psychiatrist">Psychiatrist</option>
                     <option value="Primary Care">Primary Care</option>
+                    <option value="Orthopedic">Orthopedic</option>
+                    <option value="Gynecologist">Gynecologist</option>
+                    <option value="Ophthalmologist">Ophthalmologist</option>
+                    <option value="Dentist">Dentist</option>
+                    <option value="Surgeon">Surgeon</option>
+                    <option value="ENT Specialist">ENT Specialist</option>
+                    <option value="Radiologist">Radiologist</option>
+                    <option value="Nephrologist">Nephrologist</option>
+                    <option value="Urologist">Urologist</option>
+                    <option value="Gastroenterologist">Gastroenterologist</option>
+                    <option value="Oncologist">Oncologist</option>
+                    <option value="Pulmonologist">Pulmonologist</option>
+                    <option value="Endocrinologist">Endocrinologist</option>
+                    <option value="Physiotherapist">Physiotherapist</option>
                   </select>
                 </div>
 
@@ -163,7 +212,7 @@ const DoctorListing = () => {
                   <input
                     type="text"
                     placeholder="Enter location"
-                    value={filters.location}
+                    value={filterForm.location}
                     onChange={(e) =>
                       handleFilterChange("location", e.target.value)
                     }
@@ -177,7 +226,7 @@ const DoctorListing = () => {
                     Appointment Type
                   </h4>
                   <select
-                    value={filters.appointmentType}
+                    value={filterForm.appointmentType}
                     onChange={(e) =>
                       handleFilterChange("appointmentType", e.target.value)
                     }
@@ -198,7 +247,7 @@ const DoctorListing = () => {
                   <input
                     type="number"
                     placeholder="Min years"
-                    value={filters.minExperience}
+                    value={filterForm.minExperience}
                     onChange={(e) =>
                       handleFilterChange("minExperience", e.target.value)
                     }
@@ -215,7 +264,7 @@ const DoctorListing = () => {
                   <input
                     type="number"
                     placeholder="Max fee"
-                    value={filters.maxFee}
+                    value={filterForm.maxFee}
                     onChange={(e) =>
                       handleFilterChange("maxFee", e.target.value)
                     }
@@ -224,17 +273,17 @@ const DoctorListing = () => {
                   />
                 </div>
 
+                {/* Apply Filters Button */}
+                <button
+                  onClick={applyFilters}
+                  className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary-hover transition-colors mb-3"
+                >
+                  Apply Filters
+                </button>
+
                 {/* Clear Filters Button */}
                 <button
-                  onClick={() =>
-                    setFilters({
-                      specialty: "",
-                      location: "",
-                      appointmentType: "",
-                      minExperience: "",
-                      maxFee: "",
-                    })
-                  }
+                  onClick={clearFilters}
                   className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200 transition-colors"
                 >
                   Clear Filters
@@ -269,15 +318,7 @@ const DoctorListing = () => {
                   Try adjusting your filters or search criteria.
                 </p>
                 <button
-                  onClick={() =>
-                    setFilters({
-                      specialty: "",
-                      location: "",
-                      appointmentType: "",
-                      minExperience: "",
-                      maxFee: "",
-                    })
-                  }
+                  onClick={clearFilters}
                   className="btn-primary"
                 >
                   Clear Filters

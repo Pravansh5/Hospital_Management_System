@@ -28,23 +28,7 @@ const createAppointment = async (req, res) => {
       return sendResponse(res, 400, false, "Missing required fields");
     }
 
-    // Check if doctor exists and is a doctor
-    const doctor = await User.findById(doctorId);
-    if (!doctor || doctor.role !== "doctor") {
-      return sendResponse(res, 404, false, "Doctor not found");
-    }
-
-    // Check if patient is trying to book for themselves
-    if (patientId === doctorId) {
-      return sendResponse(
-        res,
-        400,
-        false,
-        "Cannot book appointment with yourself"
-      );
-    }
-
-    // Parse and validate date
+    // Parse and validate date first
     const appointmentDate = new Date(date);
     if (isNaN(appointmentDate.getTime())) {
       return sendResponse(res, 400, false, "Invalid date format");
@@ -60,9 +44,50 @@ const createAppointment = async (req, res) => {
       );
     }
 
-    // Check for conflicting appointments
-    logger.info(`Checking for conflicts: doctor=${doctorId}, date=${appointmentDate.toISOString()}, timeSlot=${JSON.stringify(timeSlot)}`);
+    // Check if doctor exists and is a doctor
+    const doctor = await User.findById(doctorId);
+    if (!doctor || doctor.role !== "doctor") {
+      return sendResponse(res, 404, false, "Doctor not found");
+    }
+
+    // Check doctor's availability for the requested time
+    const ProviderProfile = require("../models/providerProfile.model");
+    const providerProfile = await ProviderProfile.findOne({ doctorId });
     
+    if (!providerProfile || !providerProfile.availability || providerProfile.availability.length === 0) {
+      return sendResponse(res, 400, false, "Doctor has no availability set");
+    }
+
+    // Get day of week for the appointment date
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayOfWeek = dayNames[appointmentDate.getDay()];
+    
+    // Find availability for this day
+    const dayAvailability = providerProfile.availability.find(avail => avail.day === dayOfWeek);
+    
+    if (!dayAvailability) {
+      return sendResponse(res, 400, false, "Doctor is not available on this day");
+    }
+
+    // Validate appointment time is within doctor's available hours
+    const appointmentStart = timeSlot.startTime;
+    const appointmentEnd = timeSlot.endTime;
+    
+    if (appointmentStart < dayAvailability.startTime || appointmentEnd > dayAvailability.endTime) {
+      return sendResponse(res, 400, false, `Doctor is only available from ${dayAvailability.startTime} to ${dayAvailability.endTime} on ${dayOfWeek}`);
+    }
+
+    // Check if patient is trying to book for themselves
+    if (patientId === doctorId) {
+      return sendResponse(
+        res,
+        400,
+        false,
+        "Cannot book appointment with yourself"
+      );
+    }
+
+    // Check for conflicting appointments
     const conflictingAppointment = await AppointmentModel.findOne({
       doctor: doctorId,
       date: appointmentDate,
@@ -78,10 +103,6 @@ const createAppointment = async (req, res) => {
       ],
       status: { $in: ["pending", "confirmed"] },
     });
-    
-    if (conflictingAppointment) {
-      logger.info(`Conflict found: ${JSON.stringify(conflictingAppointment.timeSlot)}`);
-    }
 
     if (conflictingAppointment) {
       return sendResponse(res, 409, false, "Time slot not available");
@@ -189,10 +210,22 @@ const getUserAppointments = async (req, res) => {
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
+    // Check if appointments have reviews
+    const { Review } = require("../models/review.model");
+    const appointmentsWithReviewStatus = await Promise.all(
+      appointments.map(async (appointment) => {
+        const review = await Review.findOne({ appointment: appointment._id });
+        return {
+          ...appointment.toObject(),
+          reviewed: !!review,
+        };
+      })
+    );
+
     const total = await AppointmentModel.countDocuments(filter);
 
     sendResponse(res, 200, true, "Appointments retrieved successfully", {
-      appointments,
+      appointments: appointmentsWithReviewStatus,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),
@@ -255,6 +288,17 @@ const updateAppointmentStatus = async (req, res) => {
       return sendResponse(res, 400, false, "Invalid status change for doctor");
     }
 
+    // Prevent completing appointment before scheduled time
+    if (status === "completed" && userRole === "doctor") {
+      const appointmentDateTime = new Date(appointment.date);
+      const [hours, minutes] = appointment.timeSlot.startTime.split(':');
+      appointmentDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      
+      if (new Date() < appointmentDateTime) {
+        return sendResponse(res, 400, false, "Cannot complete appointment before scheduled time");
+      }
+    }
+
     appointment.status = status;
     if (notes) appointment.notes = notes;
 
@@ -311,6 +355,33 @@ const getAvailableSlots = async (req, res) => {
       return sendResponse(res, 404, false, "Doctor not found");
     }
 
+    // Get doctor's provider profile for availability
+    const ProviderProfile = require("../models/providerProfile.model");
+    const providerProfile = await ProviderProfile.findOne({ doctorId });
+    
+    if (!providerProfile || !providerProfile.availability || providerProfile.availability.length === 0) {
+      return sendResponse(res, 200, true, "No availability set for this doctor", {
+        date,
+        doctor: { id: doctor._id, name: doctor.name },
+        availableSlots: [],
+      });
+    }
+
+    // Get day of week for the appointment date
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayOfWeek = dayNames[appointmentDate.getDay()];
+    
+    // Find availability for this day
+    const dayAvailability = providerProfile.availability.find(avail => avail.day === dayOfWeek);
+    
+    if (!dayAvailability) {
+      return sendResponse(res, 200, true, "Doctor not available on this day", {
+        date,
+        doctor: { id: doctor._id, name: doctor.name },
+        availableSlots: [],
+      });
+    }
+
     // Get all booked appointments for this doctor on this date
     const bookedAppointments = await AppointmentModel.find({
       doctor: doctorId,
@@ -318,10 +389,10 @@ const getAvailableSlots = async (req, res) => {
       status: { $in: ["pending", "confirmed"] },
     }).select("timeSlot");
 
-    // Define working hours (9 AM to 5 PM, 30-minute slots)
+    // Use doctor's availability hours
     const workingHours = {
-      start: "09:00",
-      end: "17:00",
+      start: dayAvailability.startTime,
+      end: dayAvailability.endTime,
       slotDuration: 30, // minutes
     };
 

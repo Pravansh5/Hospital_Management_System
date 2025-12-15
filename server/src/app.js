@@ -3,11 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const swaggerUi = require('swagger-ui-express');
-const swaggerDocument = require('./docs/swagger.json');
 const { notFound, errorHandler } = require('./middleware/errorHandler.middleware');
 const routes = require('./routes/index');
-const { limiter } = require('./utils/responseHelper'); // optional rate limiter if you add one
 
 const app = express();
 
@@ -24,12 +21,6 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Optional rate limiter
-if (limiter) app.use(limiter);
-
-// API Docs
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
 // Health check route
 app.get('/health', (req, res) => {
   res.status(200).json({
@@ -38,6 +29,9 @@ app.get('/health', (req, res) => {
     time: new Date().toISOString()
   });
 });
+
+// Serve static files (uploaded images)
+app.use('/uploads', express.static('uploads'));
 
 // Mount all routes
 app.use('/api', routes);

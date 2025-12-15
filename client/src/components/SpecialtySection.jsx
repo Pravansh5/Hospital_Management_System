@@ -23,11 +23,11 @@ const specialties = [
     count: "1,200+ doctors",
   },
   {
-    name: "Dentist",
-    icon: Smile,
-    color: "bg-green-50 hover:bg-green-100 border-green-200",
-    iconColor: "text-green-600",
-    count: "800+ doctors",
+    name: "Cardiologist",
+    icon: Heart,
+    color: "bg-red-50 hover:bg-red-100 border-red-200",
+    iconColor: "text-red-600",
+    count: "190+ doctors",
   },
   {
     name: "Dermatologist",
@@ -37,27 +37,6 @@ const specialties = [
     count: "450+ doctors",
   },
   {
-    name: "Psychiatrist",
-    icon: Brain,
-    color: "bg-purple-50 hover:bg-purple-100 border-purple-200",
-    iconColor: "text-purple-600",
-    count: "320+ doctors",
-  },
-  {
-    name: "Eye Doctor",
-    icon: Eye,
-    color: "bg-indigo-50 hover:bg-indigo-100 border-indigo-200",
-    iconColor: "text-indigo-600",
-    count: "280+ doctors",
-  },
-  {
-    name: "Cardiologist",
-    icon: Heart,
-    color: "bg-red-50 hover:bg-red-100 border-red-200",
-    iconColor: "text-red-600",
-    count: "190+ doctors",
-  },
-  {
     name: "Pediatrician",
     icon: Baby,
     color: "bg-pink-50 hover:bg-pink-100 border-pink-200",
@@ -65,39 +44,18 @@ const specialties = [
     count: "380+ doctors",
   },
   {
-    name: "Orthopedist",
-    icon: Bone,
-    color: "bg-orange-50 hover:bg-orange-100 border-orange-200",
-    iconColor: "text-orange-600",
-    count: "220+ doctors",
-  },
-  {
     name: "Neurologist",
-    icon: Zap,
-    color: "bg-teal-50 hover:bg-teal-100 border-teal-200",
-    iconColor: "text-teal-600",
+    icon: Brain,
+    color: "bg-purple-50 hover:bg-purple-100 border-purple-200",
+    iconColor: "text-purple-600",
     count: "150+ doctors",
   },
   {
-    name: "Therapist",
-    icon: Activity,
-    color: "bg-emerald-50 hover:bg-emerald-100 border-emerald-200",
-    iconColor: "text-emerald-600",
-    count: "420+ doctors",
-  },
-  {
-    name: "ENT Doctor",
-    icon: Ear,
-    color: "bg-cyan-50 hover:bg-cyan-100 border-cyan-200",
-    iconColor: "text-cyan-600",
-    count: "180+ doctors",
-  },
-  {
-    name: "Pharmacist",
-    icon: Pill,
-    color: "bg-violet-50 hover:bg-violet-100 border-violet-200",
-    iconColor: "text-violet-600",
-    count: "90+ doctors",
+    name: "Psychiatrist",
+    icon: Zap,
+    color: "bg-indigo-50 hover:bg-indigo-100 border-indigo-200",
+    iconColor: "text-indigo-600",
+    count: "320+ doctors",
   },
 ];
 
@@ -114,7 +72,7 @@ const SpecialtySection = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
           {specialties.map((specialty) => {
             const IconComponent = specialty.icon;
             return (

@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, User, Phone, Mail, Filter, Eye, X } from "lucide-react";
+import { Calendar, Clock, User, Phone, Mail, Filter, Eye, X, Video, Star } from "lucide-react";
 import { motion } from "framer-motion";
+import toast from 'react-hot-toast';
 import api from "../utils/api";
 
 const AppointmentsPage = () => {
@@ -11,7 +12,13 @@ const AppointmentsPage = () => {
   const [filter, setFilter] = useState("all");
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
   const [user, setUser] = useState(null);
+  const [ratingData, setRatingData] = useState({
+    rating: 0,
+    title: "",
+    comment: "",
+  });
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -69,11 +76,46 @@ const AppointmentsPage = () => {
       if (response.data.success) {
         fetchAppointments();
         setShowModal(false);
-        alert('Appointment status updated successfully!');
+        toast.success('Appointment status updated successfully!');
       }
     } catch (error) {
       console.error("Error updating appointment:", error);
-      alert(error.response?.data?.message || 'Failed to update appointment status');
+      toast.error(error.response?.data?.message || 'Failed to update appointment status');
+    }
+  };
+
+  const handleRateDoctor = (appointment) => {
+    setSelectedAppointment(appointment);
+    setRatingData({ rating: 0, title: "", comment: "" });
+    setShowRatingModal(true);
+  };
+
+  const submitRating = async () => {
+    try {
+      if (ratingData.rating === 0) {
+        toast.error('Please select a rating');
+        return;
+      }
+      if (!ratingData.title || !ratingData.comment) {
+        toast.error('Please fill in all fields');
+        return;
+      }
+
+      const response = await api.post('/review', {
+        appointmentId: selectedAppointment._id,
+        rating: ratingData.rating,
+        title: ratingData.title,
+        comment: ratingData.comment,
+      });
+
+      if (response.data.success) {
+        toast.success('Review submitted successfully!');
+        setShowRatingModal(false);
+        fetchAppointments();
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast.error(error.response?.data?.message || 'Failed to submit review');
     }
   };
 
@@ -107,6 +149,13 @@ const AppointmentsPage = () => {
       minute: "2-digit",
       hour12: true,
     });
+  };
+
+  const canCompleteAppointment = (appointment) => {
+    const appointmentDateTime = new Date(appointment.date);
+    const [hours, minutes] = appointment.timeSlot.startTime.split(':');
+    appointmentDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    return new Date() >= appointmentDateTime;
   };
 
   const filteredAppointments = appointments.filter((appointment) => {
@@ -211,6 +260,23 @@ const AppointmentsPage = () => {
                         </p>
                       </div>
                     )}
+
+                    {appointment.status === "confirmed" && appointment.meetingLink && (
+                      <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Video className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-800">Meeting Link</span>
+                        </div>
+                        <a
+                          href={appointment.meetingLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                        >
+                          {appointment.meetingLink}
+                        </a>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-2">
@@ -223,6 +289,44 @@ const AppointmentsPage = () => {
                     >
                       <Eye className="h-4 w-4" />
                     </button>
+                    {appointment.status === "pending" && user?.role === "doctor" && (
+                      <button
+                        onClick={() => updateAppointmentStatus(appointment._id, "confirmed")}
+                        className="px-3 py-1 text-sm text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      >
+                        Confirm
+                      </button>
+                    )}
+                    {appointment.status === "confirmed" && user?.role === "doctor" && (
+                      <button
+                        onClick={() => updateAppointmentStatus(appointment._id, "completed")}
+                        disabled={!canCompleteAppointment(appointment)}
+                        className={`px-3 py-1 text-sm rounded-lg transition-colors ${
+                          canCompleteAppointment(appointment)
+                            ? "text-blue-600 hover:bg-blue-50"
+                            : "text-gray-400 cursor-not-allowed bg-gray-50"
+                        }`}
+                        title={!canCompleteAppointment(appointment) ? "Cannot complete before scheduled time" : ""}
+                      >
+                        Complete
+                      </button>
+                    )}
+                    {appointment.status === "completed" && user?.role === "patient" && (
+                      appointment.reviewed ? (
+                        <span className="px-3 py-1 text-sm text-green-600 bg-green-50 rounded-lg flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-current" />
+                          Reviewed
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleRateDoctor(appointment)}
+                          className="px-3 py-1 text-sm text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors flex items-center gap-1"
+                        >
+                          <Star className="h-3 w-3" />
+                          Rate
+                        </button>
+                      )
+                    )}
                     {appointment.status === "pending" && (
                       <button
                         onClick={() => updateAppointmentStatus(appointment._id, "cancelled")}
@@ -235,6 +339,84 @@ const AppointmentsPage = () => {
                 </div>
               </motion.div>
             ))}
+          </div>
+        )}
+
+        {/* Rating Modal */}
+        {showRatingModal && selectedAppointment && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Rate Dr. {selectedAppointment.doctor?.name}</h3>
+                <button
+                  onClick={() => setShowRatingModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Rating</label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRatingData({ ...ratingData, rating: star })}
+                        className="focus:outline-none"
+                      >
+                        <Star
+                          className={`h-8 w-8 ${
+                            star <= ratingData.rating
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Title</label>
+                  <input
+                    type="text"
+                    value={ratingData.title}
+                    onChange={(e) => setRatingData({ ...ratingData, title: e.target.value })}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Brief summary of your experience"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block">Comment</label>
+                  <textarea
+                    value={ratingData.comment}
+                    onChange={(e) => setRatingData({ ...ratingData, comment: e.target.value })}
+                    rows={4}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Share your experience with this doctor"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-2">
+                <button
+                  onClick={submitRating}
+                  className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-primary-hover transition-colors"
+                >
+                  Submit Review
+                </button>
+                <button
+                  onClick={() => setShowRatingModal(false)}
+                  className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -306,6 +488,28 @@ const AppointmentsPage = () => {
               </div>
 
               <div className="mt-6 flex gap-2">
+                {selectedAppointment.status === "pending" && user?.role === "doctor" && (
+                  <button
+                    onClick={() => updateAppointmentStatus(selectedAppointment._id, "confirmed")}
+                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Confirm
+                  </button>
+                )}
+                {selectedAppointment.status === "confirmed" && user?.role === "doctor" && (
+                  <button
+                    onClick={() => updateAppointmentStatus(selectedAppointment._id, "completed")}
+                    disabled={!canCompleteAppointment(selectedAppointment)}
+                    className={`flex-1 py-2 px-4 rounded-lg transition-colors ${
+                      canCompleteAppointment(selectedAppointment)
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
+                    title={!canCompleteAppointment(selectedAppointment) ? "Cannot complete before scheduled time" : ""}
+                  >
+                    Mark as Completed
+                  </button>
+                )}
                 {selectedAppointment.status === "pending" && (
                   <button
                     onClick={() => updateAppointmentStatus(selectedAppointment._id, "cancelled")}

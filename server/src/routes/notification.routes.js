@@ -13,16 +13,12 @@ const {
   adminOrDoctorOnly,
 } = require("../middleware/auth.middleware");
 
-// Create notification (Admin/Doctor)
 router.post("/", authMiddleware, adminOrDoctorOnly, createNotification);
 
-// Get user's notifications
 router.get("/", authMiddleware, getNotifications);
 
-// Mark single notification as read
 router.patch("/:id/read", authMiddleware, markAsRead);
 
-// Mark all notifications as read
 router.patch("/read-all", authMiddleware, markAllAsRead);
 
 module.exports = router;

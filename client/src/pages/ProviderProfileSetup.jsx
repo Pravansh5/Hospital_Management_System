@@ -17,6 +17,7 @@ const ProviderProfileSetup = () => {
     languages: "",
     location: "",
     appointmentType: "both",
+    profilePhoto: "",
     availability: [
       { day: "Monday", startTime: "09:00", endTime: "17:00" },
       { day: "Tuesday", startTime: "09:00", endTime: "17:00" },
@@ -25,6 +26,8 @@ const ProviderProfileSetup = () => {
       { day: "Friday", startTime: "09:00", endTime: "17:00" },
     ],
   });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState("");
 
   useEffect(() => {
     // Check if user is logged in and is a doctor
@@ -69,6 +72,7 @@ const ProviderProfileSetup = () => {
             languages: Array.isArray(profile.languages) ? profile.languages.join(", ") : "",
             location: profile.location || "",
             appointmentType: profile.appointmentType || "both",
+            profilePhoto: profile.profilePhoto || "",
             availability: profile.availability && profile.availability.length > 0 
               ? profile.availability 
               : [
@@ -79,6 +83,9 @@ const ProviderProfileSetup = () => {
                   { day: "Friday", startTime: "09:00", endTime: "17:00" },
                 ],
           });
+          if (profile.profilePhoto) {
+            setPhotoPreview(profile.profilePhoto);
+          }
         }
       }
     } catch (error) {
@@ -133,9 +140,31 @@ const ProviderProfileSetup = () => {
         return;
       }
 
+      let photoPath = formData.profilePhoto;
+
+      // Upload photo first if selected
+      if (selectedFile) {
+        const photoFormData = new FormData();
+        photoFormData.append('profilePhoto', selectedFile);
+
+        const photoResponse = await fetch("http://localhost:4000/api/provider/upload-photo", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: photoFormData,
+        });
+
+        const photoData = await photoResponse.json();
+        if (photoData.success) {
+          photoPath = photoData.data.profilePhoto;
+        }
+      }
+
       // Prepare data for API
       const profileData = {
         ...formData,
+        profilePhoto: photoPath,
         experience: parseInt(formData.experience),
         consultationFee: parseFloat(formData.consultationFee),
         languages: formData.languages.split(",").map((lang) => lang.trim()),
@@ -232,6 +261,16 @@ const ProviderProfileSetup = () => {
                   <option value="Gynecologist">Gynecologist</option>
                   <option value="Ophthalmologist">Ophthalmologist</option>
                   <option value="Dentist">Dentist</option>
+                  <option value="Surgeon">Surgeon</option>
+                  <option value="ENT Specialist">ENT Specialist</option>
+                  <option value="Radiologist">Radiologist</option>
+                  <option value="Nephrologist">Nephrologist</option>
+                  <option value="Urologist">Urologist</option>
+                  <option value="Gastroenterologist">Gastroenterologist</option>
+                  <option value="Oncologist">Oncologist</option>
+                  <option value="Pulmonologist">Pulmonologist</option>
+                  <option value="Endocrinologist">Endocrinologist</option>
+                  <option value="Physiotherapist">Physiotherapist</option>
                 </select>
               </div>
 
@@ -284,6 +323,37 @@ const ProviderProfileSetup = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                Profile Photo
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  setSelectedFile(file);
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => setPhotoPreview(e.target.result);
+                    reader.readAsDataURL(file);
+                  } else {
+                    setPhotoPreview("");
+                  }
+                }}
+                className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              {(photoPreview || formData.profilePhoto) && (
+                <div className="mt-2">
+                  <img
+                    src={photoPreview || formData.profilePhoto}
+                    alt="Profile preview"
+                    className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Languages (comma-separated)
               </label>
               <input
@@ -307,8 +377,8 @@ const ProviderProfileSetup = () => {
                 className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               >
                 <option value="in-person">In-person only</option>
-                <option value="telemedicine">Telemedicine only</option>
-                <option value="both">Both in-person and telemedicine</option>
+                <option value="telemedicine">Online Appointment only</option>
+                <option value="both">Both in-person and online appointment</option>
               </select>
             </div>
 

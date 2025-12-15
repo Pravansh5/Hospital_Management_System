@@ -10,6 +10,7 @@ const {
   markHelpful,
   respondToReview,
   reportReview,
+  updateRating,
 } = require("../controllers/review.controller");
 
 const {
@@ -51,5 +52,8 @@ router.post(
 
 // Report a review (Any authenticated user)
 router.post("/:id/report", authMiddleware, reportReview);
+
+// Manual rating update for testing
+router.post("/update-rating/:doctorId", authMiddleware, updateRating);
 
 module.exports = router;
