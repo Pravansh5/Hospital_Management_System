@@ -43,8 +43,9 @@ const Navbar = ({
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2 group">
-              <div className="bg-primary p-2 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                <Heart className="h-6 w-6 text-white" />
+              <div className="bg-sky-100 p-2 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                <img className="h-6 w-6 " src="/medi_care_logo.png" alt="Medicare Logo" />
+
               </div>
               <span className="text-2xl font-bold text-gray-900 group-hover:text-primary transition-colors">
                 MediCare

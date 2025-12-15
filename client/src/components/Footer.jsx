@@ -70,7 +70,7 @@ const Footer = () => {
 
           {/* Copyright & Social */}
           <div className="flex items-center space-x-4">
-            <span className="text-gray-400 text-sm">© 2024 MediCare</span>
+            <span className="text-gray-400 text-sm">© 2025 MediCare</span>
             <div className="flex space-x-3">
               {socialLinks.map((social) => {
                 const IconComponent = social.icon;
