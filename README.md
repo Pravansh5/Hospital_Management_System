@@ -41,10 +41,16 @@ A simplified hospital management system for booking and managing medical appoint
 ### Installation
 
 1. **Clone and install dependencies**
-   ```bash
    git clone <repository-url>
    cd Hospital_Management_System
-   npm run install-all
+   
+   # Install Server Dependencies
+   cd server
+   npm install
+
+   # Install Client Dependencies
+   cd ../client
+   npm install
    ```
 
 2. **Configure environment**
@@ -54,14 +60,19 @@ A simplified hospital management system for booking and managing medical appoint
    # Edit .env with your MongoDB URI and other settings
    ```
 
-3. **Start development servers**
+3. **Start the Backend**
    ```bash
+   cd server
    npm run dev
    ```
+   Server will start at: http://localhost:4000
 
-   This starts:
-   - Backend server: http://localhost:4000
-   - Frontend app: http://localhost:3001
+4. **Start the Frontend** (in a new terminal)
+   ```bash
+   cd client
+   npm run dev
+   ```
+   App will start at: http://localhost:3001
 
 ## Project Structure
 
@@ -159,10 +170,8 @@ EMAIL_FROM="Hospital Management <no-reply@example.com>"
 ## Development
 
 ### Available Scripts
-- `npm run dev` - Start both frontend and backend
-- `npm run server` - Start backend only
-- `npm run client` - Start frontend only
-- `npm run install-all` - Install all dependencies
+- **Backend**: `npm run dev` (inside `/server`)
+- **Frontend**: `npm run dev` (inside `/client`)
 
 ### Database Seeding
 ```bash
